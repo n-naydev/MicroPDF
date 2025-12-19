@@ -1,0 +1,336 @@
+body {
+    background-color: #f0f0f0;
+    font-family: sans-serif;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.toolbar {
+    background: #333;
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+#save-btn {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 4px;
+}
+
+#pdf-wrapper {
+    position: relative; /* CRITICAL: Establishes coordinate system */
+    margin-top: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+#pdf-canvas {
+    display: block; /* Removes tiny scrollbar gap */
+}
+
+/* The transparent layer where we draw */
+#drawing-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 10;
+    /* Cursor indicates drawing mode */
+    cursor: crosshair; 
+}
+
+/* ... existing styles ... */
+
+/* UPDATED: The Field Box */
+.field-box {
+    position: absolute;
+    border: 2px solid #007bff;
+    background-color: rgba(0, 123, 255, 0.2);
+    box-sizing: border-box;
+    /* Prevent user from accidentally selecting text while dragging */
+    user-select: none; 
+    cursor: move; /* Shows the 'move' icon when hovering */
+}
+
+/* SELECTED STATE: Dashed border + higher z-index */
+.field-box.selected {
+    border: 2px dashed #004494;
+    background-color: rgba(0, 123, 255, 0.1);
+    z-index: 100; /* Bring to front */
+}
+
+/* DELETE BUTTON (Top-Right) */
+.delete-btn {
+    display: none; /* Hidden by default */
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 20px;
+    height: 20px;
+    background: red;
+    color: white;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 18px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* RESIZE HANDLE (Bottom-Right) */
+.resize-handle {
+    display: none; /* Hidden by default */
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    width: 10px;
+    height: 10px;
+    background: white;
+    border: 1px solid #007bff;
+    cursor: nwse-resize; /* Diagonal cursor */
+}
+
+.toolbar {
+    background: #333;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.tool-group {
+    display: flex;
+    gap: 10px;
+}
+
+.tool-btn {
+    padding: 8px 15px;
+    background: #555;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.tool-btn:hover { background: #666; }
+
+/* The Active Tool gets a distinct color */
+.tool-btn.active {
+    background: #007bff; 
+    font-weight: bold;
+}
+
+.save-btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* --- WIDGET TYPES --- */
+
+/* 1. FORM FIELD (Existing) */
+.field-box {
+    position: absolute;
+    border: 2px solid #007bff;
+    background-color: rgba(0, 123, 255, 0.2);
+    box-sizing: border-box;
+}
+
+/* 2. TEXT BOX */
+.text-box {
+    position: absolute;
+    border: 1px dashed transparent; /* Invisible border unless hovered */
+    background: transparent;
+    padding: 0;
+    font-family: Helvetica, sans-serif; /* Match PDF font */
+    font-size: 14px;
+    line-height: 1;
+    cursor: text;
+}
+
+.text-box:hover, .text-box:focus {
+    border: 1px dashed #666;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.text-input {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: inherit;
+    resize: none;
+    outline: none;
+    overflow: hidden;
+}
+
+/* 3. SIGNATURE BOX */
+.signature-box {
+    position: absolute;
+    border: 2px solid #ffc107; /* Yellow border */
+    background-color: rgba(255, 255, 255, 0.1);
+    box-sizing: border-box;
+    cursor: crosshair;
+}
+
+.signature-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: crosshair;
+}
+
+/* Delete Button (Generic for all) */
+.delete-btn {
+    display: none;
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 20px;
+    height: 20px;
+    background: red;
+    color: white;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 18px;
+    cursor: pointer;
+    font-weight: bold;
+    z-index: 200;
+}
+
+.field-box:hover .delete-btn, .text-box:hover .delete-btn, .signature-box:hover .delete-btn {
+    display: block;
+}
+
+.sub-toolbar {
+    background: #444;
+    color: white;
+    padding: 5px 10px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    font-size: 14px;
+    height: 30px; /* Fixed height to prevent jumping */
+    border-bottom: 1px solid #555;
+}
+
+.sub-toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+}
+
+.sub-toolbar input[type="number"] {
+    width: 50px;
+    padding: 2px;
+    border-radius: 3px;
+    border: none;
+}
+
+.sub-toolbar input[type="color"] {
+    width: 30px;
+    height: 20px;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.sub-toolbar input[type="range"] {
+    width: 80px;
+    cursor: pointer;
+}
+
+/* --- CONTENT LOCKING --- */
+
+/* By default, inputs/canvases ignore clicks so you can DRAG the box easily */
+.text-input, 
+.signature-canvas {
+    pointer-events: none; 
+    width: 100%;
+    height: 100%;
+}
+
+/* --- EDIT MODE --- */
+
+/* When 'editing' class is added: */
+/* 1. Enable interaction with content */
+.text-box.editing .text-input,
+.signature-box.editing .signature-canvas {
+    pointer-events: auto;
+}
+
+/* 2. Change border color to Green to indicate "Active" */
+.field-box.editing, 
+.text-box.editing, 
+.signature-box.editing {
+    border-color: #28a745 !important; /* Green */
+    z-index: 1000;
+}
+
+/* 3. Disable the 'Move' cursor so user knows they can't drag now */
+.text-box.editing, 
+.signature-box.editing {
+    cursor: default; 
+}
+
+
+
+
+/* --- VISIBILITY LOGIC --- */
+
+/* Show DELETE BUTTON on Hover OR Selection for ALL types */
+.field-box:hover .delete-btn,
+.field-box.selected .delete-btn,
+.text-box:hover .delete-btn,
+.text-box.selected .delete-btn,
+.signature-box:hover .delete-btn,
+.signature-box.selected .delete-btn {
+    display: block;
+}
+
+/* Show RESIZE HANDLE on Hover OR Selection for ALL types */
+.field-box:hover .resize-handle,
+.field-box.selected .resize-handle,
+.text-box:hover .resize-handle,
+.text-box.selected .resize-handle,
+.signature-box:hover .resize-handle,
+.signature-box.selected .resize-handle {
+    display: block;
+}
+
+/* --- OPTIONAL: HOVER BORDERS --- */
+/* This helps user see what they are hovering over before they click */
+
+.field-box:hover {
+    border-color: #0056b3; /* Darker Blue */
+    z-index: 50; 
+}
+
+/* Text box has a transparent border by default, so we need to make it visible on hover */
+.text-box:hover {
+    border: 1px dashed #666; 
+    background-color: rgba(255, 255, 255, 0.3); /* Slight white background to read text better */
+    z-index: 50;
+}
+
+.signature-box:hover {
+    border-color: #e0a800; /* Darker Yellow */
+    z-index: 50;
+}

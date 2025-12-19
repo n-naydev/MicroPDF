@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Manual Form Builder",
+  "version": "1.0",
+  "permissions": ["activeTab", "downloads"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "Open PDF in Editor",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "viewer.html",
+        "./libs/pdf.worker.js",
+        "./libs/pdf-lib.min.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

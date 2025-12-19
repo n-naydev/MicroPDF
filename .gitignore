@@ -1,0 +1,36 @@
+# --- System Files ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Editor & IDE Files ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# --- Node / Dependencies ---
+# Even though you use a 'libs' folder now, it is good practice to
+# ignore node_modules in case you add a package.json later.
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# --- Chrome Extension Artifacts ---
+# These are created when you "Pack Extension" in Chrome
+*.crx
+*.pem
+# Zips created for uploading to the Web Store
+*.zip
+
+# --- Temporary / Build Output ---
+dist/
+build/
+coverage/
+.env.local
+.env
