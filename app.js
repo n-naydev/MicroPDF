@@ -5,7 +5,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "./libs/pdf.worker.mjs";
 const { PDFDocument, rgb, StandardFonts } = window.PDFLib;
 
 // --- STATE ---
-let currentTool = "field"; // 'field', 'text', 'signature'
+let currentTool = "select"; // 'select', 'field', 'text', 'signature'
 let pdfDoc = null;
 let currentPdfBytes = null;
 let scale = 1.5;
@@ -15,24 +15,23 @@ let textSettings = { size: 14, color: "#000000" };
 let sigSettings = { width: 2, color: "#000000" };
 
 // --- TOOLBAR LOGIC ---
+document.getElementById("tool-select").onclick = () => setTool("select");
 document.getElementById("tool-field").onclick = () => setTool("field");
 document.getElementById("tool-text").onclick = () => setTool("text");
 document.getElementById("tool-signature").onclick = () => setTool("signature");
 
 function setTool(tool) {
   currentTool = tool;
-
-  // 1. Update UI Buttons
   document
     .querySelectorAll(".tool-btn")
     .forEach((b) => b.classList.remove("active"));
   document.getElementById(`tool-${tool}`).classList.add("active");
 
-  // 2. Render Sub-Toolbar
   const sub = document.getElementById("sub-toolbar");
-  sub.innerHTML = ""; // Clear previous
+  sub.innerHTML = "";
 
-  if (tool === "field") {
+  // Hide sub-toolbar for Field AND Select tools
+  if (tool === "field" || tool === "select") {
     // HIDE the toolbar entirely for Fields (Clean look)
     sub.style.display = "none";
   } else if (tool === "text") {
@@ -100,66 +99,62 @@ function renderPage(num) {
   });
 }
 
-// --- INTERACTION LAYER ---
+// --- INTERACTION LAYER (Click-to-Place Version) ---
 function setupInteractionLayer(w, h) {
   const overlay = document.getElementById("drawing-layer");
   overlay.style.width = w + "px";
   overlay.style.height = h + "px";
 
-  let isDrawingBox = false;
-  let startX, startY;
-  let tempBox = null;
+  // Standard dimensions for "1 row input" style
+  const defaultSizes = {
+    field: { w: 200, h: 30 }, // Looks like a standard form input
+    text: { w: 200, h: 30 }, // Fits size 14 text nicely
+    signature: { w: 250, h: 120 }, // Big enough to sign name
+  };
 
   overlay.addEventListener("mousedown", (e) => {
+    // 1. Only trigger if clicking blank space (not an existing box)
     if (e.target !== overlay) return;
-
-    isDrawingBox = true;
-    startX = e.offsetX;
-    startY = e.offsetY;
-
-    // Create the visual box
-    tempBox = document.createElement("div");
-    tempBox.style.left = startX + "px";
-    tempBox.style.top = startY + "px";
-    tempBox.style.width = "0px";
-    tempBox.style.height = "0px";
-    overlay.appendChild(tempBox);
-
-    // Class depends on tool
-    if (currentTool === "field") tempBox.className = "field-box";
-    if (currentTool === "text") tempBox.className = "text-box";
-    if (currentTool === "signature") tempBox.className = "signature-box";
-
-    deselectAll();
-  });
-
-  overlay.addEventListener("mousemove", (e) => {
-    if (!isDrawingBox) return;
-    const width = e.offsetX - startX;
-    const height = e.offsetY - startY;
-    tempBox.style.width = Math.abs(width) + "px";
-    tempBox.style.height = Math.abs(height) + "px";
-    tempBox.style.left = (width < 0 ? e.offsetX : startX) + "px";
-    tempBox.style.top = (height < 0 ? e.offsetY : startY) + "px";
-  });
-
-  overlay.addEventListener("mouseup", () => {
-    if (!isDrawingBox) return;
-    isDrawingBox = false;
-
-    // Small threshold to prevent accidental clicks
-    if (parseInt(tempBox.style.width) < 20) {
-      tempBox.remove();
-      tempBox = null;
+    const selected = document.querySelector(".selected");
+    const editing = document.querySelector(".editing");
+    if (selected || editing || currentTool === "select") {
+      deselectAll();
       return;
     }
 
-    finalizeWidget(tempBox, currentTool);
-    tempBox = null;
+    // 2. Get the default size for the current tool
+    const size = defaultSizes[currentTool];
+
+    // 3. Create the element immediately
+    const newBox = document.createElement("div");
+
+    // Assign Class
+    if (currentTool === "field") newBox.className = "field-box";
+    if (currentTool === "text") newBox.className = "text-box";
+    if (currentTool === "signature") newBox.className = "signature-box";
+
+    // Apply Styles (Position & Size)
+    newBox.style.width = size.w + "px";
+    newBox.style.height = size.h + "px";
+
+    // Position the top-left corner where user clicked
+    newBox.style.left = e.offsetX + "px";
+    newBox.style.top = e.offsetY + "px";
+
+    // Append to DOM
+    overlay.appendChild(newBox);
+
+    // 4. Initialize the internals (Delete btn, Textarea, Canvas, etc.)
+    finalizeWidget(newBox, currentTool);
+
+    // 5. Auto-select the new box so user can move it immediately if needed
+    deselectAll();
+    if (newBox.className !== "field-box") {
+      newBox.classList.add("selected");
+      newBox.classList.add("editing");
+    }
   });
 }
-
-// --- UPDATED WIDGET LOGIC ---
 
 function finalizeWidget(element, type) {
   // 1. Delete Button
@@ -229,11 +224,23 @@ function makeBoxInteractive(box) {
       return;
 
     e.stopPropagation();
-    deselectAll();
-    box.classList.add("selected");
+    if (e.shiftKey) {
+      // Toggle selection
+      if (box.classList.contains("selected")) {
+        box.classList.remove("selected");
+      } else {
+        box.classList.add("selected");
+      }
+    } else {
+      // Normal Click: If not already selected, select ONLY this one
+      if (!box.classList.contains("selected")) {
+        deselectAll();
+        box.classList.add("selected");
+      }
+    }
 
     // Only Drag if NOT editing
-    initDrag(e, box);
+    initDrag(e);
   });
 
   // B. DOUBLE CLICK -> Enter Edit Mode
@@ -306,28 +313,41 @@ function setupSignatureDrawing(canvas, width, color) {
 
 // --- BOX INTERACTION LOGIC (Restored) ---
 
-function initDrag(e, box) {
+function initDrag(e) {
   const startX = e.clientX;
   const startY = e.clientY;
 
-  // Get current position (parse '100px' -> 100)
-  const startLeft = parseInt(box.style.left || 0);
-  const startTop = parseInt(box.style.top || 0);
+  // 1. Find all selected items
+  const selectedItems = document.querySelectorAll(".selected");
 
-  function doDrag(e) {
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    box.style.left = startLeft + dx + "px";
-    box.style.top = startTop + dy + "px";
-  }
+  // 2. Record starting positions for EVERY selected item
+  const initialPositions = [];
+  selectedItems.forEach((item) => {
+    initialPositions.push({
+      el: item,
+      left: parseFloat(item.style.left),
+      top: parseFloat(item.style.top),
+    });
+  });
 
-  function stopDrag() {
-    document.documentElement.removeEventListener("mousemove", doDrag);
-    document.documentElement.removeEventListener("mouseup", stopDrag);
-  }
+  const onMouseMove = (ev) => {
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
 
-  document.documentElement.addEventListener("mousemove", doDrag);
-  document.documentElement.addEventListener("mouseup", stopDrag);
+    // 3. Move EVERY selected item by the same delta
+    initialPositions.forEach((pos) => {
+      pos.el.style.left = pos.left + dx + "px";
+      pos.el.style.top = pos.top + dy + "px";
+    });
+  };
+
+  const onMouseUp = () => {
+    window.removeEventListener("mousemove", onMouseMove);
+    window.removeEventListener("mouseup", onMouseUp);
+  };
+
+  window.addEventListener("mousemove", onMouseMove);
+  window.addEventListener("mouseup", onMouseUp);
 }
 
 function initResize(handle, box) {
@@ -381,11 +401,11 @@ function initResize(handle, box) {
 }
 
 // Update the overlay click listener to call deselectAll
-document.getElementById("drawing-layer").addEventListener("mousedown", (e) => {
-  if (e.target.id === "drawing-layer") {
-    deselectAll();
-  }
-});
+// document.getElementById("drawing-layer").addEventListener("mousedown", (e) => {
+//   if (e.target.id === "drawing-layer") {
+//     deselectAll();
+//   }
+// });
 
 // --- SAVE LOGIC (The Heavy Lifter) ---
 document.getElementById("save-btn").addEventListener("click", async () => {
@@ -484,10 +504,8 @@ let clipboard = null;
 document.addEventListener("keydown", (e) => {
   // 1. DELETE
   if (e.key === "Delete" || e.key === "Backspace") {
-    const selected = document.querySelector(".selected");
-    if (selected && !selected.classList.contains("editing")) {
-      selected.remove();
-    }
+    const selected = document.querySelectorAll(".selected");
+    selected.forEach((el) => el.remove());
   }
 
   // 2. COPY (Ctrl+C)
