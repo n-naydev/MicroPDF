@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Manual Form Builder",
   "version": "1.0",
-  "permissions": ["activeTab", "downloads"],
+  "permissions": ["activeTab", "downloads", "contextMenus"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_title": "Open PDF in Editor",
