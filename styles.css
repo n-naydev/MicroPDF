@@ -1,21 +1,45 @@
+/* 1. RESET BODY */
 body {
     background-color: #f0f0f0;
     font-family: sans-serif;
     margin: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    /* Remove 'display: flex' on body to stop it from squeezing the toolbar */
+    display: block; 
 }
 
+/* 2. FIX TOOLBAR LAYOUT */
 .toolbar {
     background: #333;
-    width: 100%;
-    padding: 10px;
-    text-align: center;
+    width: 100%;             /* Force full width */
+    height: 60px;            /* Fixed height prevents jumping */
+    padding: 0 20px;         /* Horizontal padding */
+    box-sizing: border-box;  /* Ensures padding doesn't break width */
+    
+    display: flex;
+    justify-content: center; /* Centers the button group in the middle */
+    align-items: center;
+    gap: 20px;               /* Space between Tool Group and Save Button */
+    
     position: sticky;
     top: 0;
     z-index: 100;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3); /* Nice shadow */
 }
+
+/* 3. ALIGN THE GROUPS */
+/* This pushes the tool group to the center and Save button to the right */
+/* We can use auto margins for this specific layout */
+.tool-group {
+    display: flex;
+    gap: 10px;
+    margin-left: auto; /* Pushes group to center (balanced by right auto) */
+}
+
+.save-btn {
+    margin-left: auto; /* Pushes Save button to the far right */
+}
+
+/* If you prefer everything strictly centered, remove the margins above */
 
 #save-btn {
     background: #4CAF50;
@@ -27,10 +51,22 @@ body {
     border-radius: 4px;
 }
 
-#pdf-wrapper {
-    position: relative; /* CRITICAL: Establishes coordinate system */
+/* #pdf-wrapper {
+    position: relative;
     margin-top: 20px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+} */
+
+#pdf-wrapper {
+    position: relative;
+    
+    /* 1. Shrink the wrapper to match the Canvas size exactly */
+    width: fit-content; 
+    
+    /* 2. Now that the wrapper is smaller, this centers it */
+    margin: 30px auto; 
+    
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
 }
 
 #pdf-canvas {
@@ -99,7 +135,7 @@ body {
     cursor: nwse-resize; /* Diagonal cursor */
 }
 
-.toolbar {
+/* .toolbar {
     background: #333;
     padding: 10px;
     display: flex;
@@ -108,20 +144,53 @@ body {
     position: sticky;
     top: 0;
     z-index: 100;
-}
+} */
 
 .tool-group {
     display: flex;
     gap: 10px;
 }
 
+
+/* Update .tool-btn to be square-ish */
 .tool-btn {
-    padding: 8px 15px;
+    padding: 10px;
+    width: 40px;
+    height: 40px;
     background: #555;
     color: white;
     border: none;
     cursor: pointer;
     border-radius: 4px;
+    font-size: 18px; /* Icon size */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Save button can be wider */
+.save-btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Space between icon and text */
+    font-size: 14px;
+}
+
+/* Sub-toolbar adjustments */
+.tool-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #ccc;
+}
+.tool-option i {
+    font-size: 14px;
 }
 
 .tool-btn:hover { background: #666; }
@@ -130,15 +199,6 @@ body {
 .tool-btn.active {
     background: #007bff; 
     font-weight: bold;
-}
-
-.save-btn {
-    background: #28a745;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 4px;
-    cursor: pointer;
 }
 
 /* --- WIDGET TYPES --- */
@@ -218,43 +278,58 @@ body {
     display: block;
 }
 
+/* --- SUB-TOOLBAR STYLES --- */
 .sub-toolbar {
-    background: #444;
+    background: #444; /* Dark grey background */
     color: white;
-    padding: 5px 10px;
-    display: flex;
-    gap: 15px;
+    padding: 0 20px;
+    display: flex; /* Flex is toggled by JS, but this sets initial layout */
+    gap: 20px;
     align-items: center;
     font-size: 14px;
-    height: 30px; /* Fixed height to prevent jumping */
+    height: 40px; /* Fixed height */
     border-bottom: 1px solid #555;
+    
+    /* Make it stick right below the main toolbar */
+    position: sticky;
+    top: 60px; /* Matches the height of the main toolbar */
+    z-index: 90;
 }
 
-.sub-toolbar label {
+/* Hide it by default in CSS, JS will show it when needed */
+/* Note: If JS sets display:flex, it overrides this. */
+
+.tool-option {
     display: flex;
     align-items: center;
-    gap: 5px;
-    cursor: pointer;
+    gap: 10px;
+    color: #ccc;
 }
 
+.tool-option i {
+    font-size: 14px;
+    color: #fff;
+}
+
+/* Style the inputs inside the sub-toolbar */
 .sub-toolbar input[type="number"] {
     width: 50px;
-    padding: 2px;
-    border-radius: 3px;
+    padding: 4px;
+    border-radius: 4px;
     border: none;
-}
-
-.sub-toolbar input[type="color"] {
-    width: 30px;
-    height: 20px;
-    border: none;
-    padding: 0;
-    cursor: pointer;
+    background: #fff;
 }
 
 .sub-toolbar input[type="range"] {
-    width: 80px;
     cursor: pointer;
+}
+
+.sub-toolbar input[type="color"] {
+    border: none;
+    width: 30px;
+    height: 25px;
+    cursor: pointer;
+    background: none;
 }
 
 /* --- CONTENT LOCKING --- */

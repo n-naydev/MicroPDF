@@ -32,23 +32,38 @@ function setTool(tool) {
   const sub = document.getElementById("sub-toolbar");
   sub.innerHTML = ""; // Clear previous
 
-  if (tool === "text") {
+  if (tool === "field") {
+    // HIDE the toolbar entirely for Fields (Clean look)
+    sub.style.display = "none";
+  } else if (tool === "text") {
+    sub.style.display = "flex";
     sub.innerHTML = `
-            <label>Size: <input type="number" id="opt-font-size" value="${textSettings.size}" min="8" max="72"></label>
-            <label>Color: <input type="color" id="opt-text-color" value="${textSettings.color}"></label>
-        `;
-
+        <div class="tool-option" title="Font Size">
+            <i class="fa-solid fa-text-height"></i>
+            <input type="number" id="opt-font-size" value="${textSettings.size}" min="8" max="72">
+        </div>
+        <div class="tool-option" title="Text Color">
+            <i class="fa-solid fa-palette"></i>
+            <input type="color" id="opt-text-color" value="${textSettings.color}">
+        </div>
+    `;
     // Listeners
     document.getElementById("opt-font-size").onchange = (e) =>
       (textSettings.size = parseInt(e.target.value));
     document.getElementById("opt-text-color").oninput = (e) =>
       (textSettings.color = e.target.value);
   } else if (tool === "signature") {
+    sub.style.display = "flex";
     sub.innerHTML = `
-            <label>Thickness: <input type="range" id="opt-sig-width" min="1" max="10" value="${sigSettings.width}"></label>
-            <label>Color: <input type="color" id="opt-sig-color" value="${sigSettings.color}"></label>
-        `;
-
+        <div class="tool-option" title="Stroke Thickness">
+            <i class="fa-solid fa-pen-nib"></i>
+            <input type="range" id="opt-sig-width" min="1" max="10" value="${sigSettings.width}">
+        </div>
+        <div class="tool-option" title="Stroke Color">
+            <i class="fa-solid fa-palette"></i>
+            <input type="color" id="opt-sig-color" value="${sigSettings.color}">
+        </div>
+    `;
     // Listeners
     document.getElementById("opt-sig-width").oninput = (e) =>
       (sigSettings.width = parseInt(e.target.value));

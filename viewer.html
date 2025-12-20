@@ -4,19 +4,33 @@
     <meta charset="UTF-8" />
     <title>PDF Editor</title>
     <link rel="stylesheet" href="styles.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
   </head>
   <body>
     <div class="toolbar">
       <div class="tool-group">
-        <button id="tool-field" class="tool-btn active">Form Field</button>
-        <button id="tool-text" class="tool-btn">Add Text</button>
-        <button id="tool-signature" class="tool-btn">Signature</button>
+        <button id="tool-field" class="tool-btn active" title="Add Form Field">
+          <i class="fa-regular fa-square-check"></i>
+        </button>
+
+        <button id="tool-text" class="tool-btn" title="Add Text">
+          <i class="fa-solid fa-font"></i>
+        </button>
+
+        <button id="tool-signature" class="tool-btn" title="Add Signature">
+          <i class="fa-solid fa-signature"></i>
+        </button>
       </div>
-      <button id="save-btn" class="save-btn">Download PDF</button>
+
+      <button id="save-btn" class="save-btn" title="Download PDF">
+        <i class="fa-solid fa-download"></i> <span>Download</span>
+      </button>
     </div>
 
     <div id="sub-toolbar" class="sub-toolbar"></div>
-
     <div id="pdf-wrapper">
       <canvas id="pdf-canvas"></canvas>
       <div id="drawing-layer"></div>
