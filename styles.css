@@ -129,17 +129,6 @@ body {
     cursor: nwse-resize; /* Diagonal cursor */
 }
 
-/* .toolbar {
-    background: #333;
-    padding: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-} */
-
 .tool-group {
     display: flex;
     gap: 10px;
@@ -196,14 +185,6 @@ body {
 }
 
 /* --- WIDGET TYPES --- */
-
-/* 1. FORM FIELD (Existing) */
-.field-box {
-    position: absolute;
-    border: 2px solid #007bff;
-    background-color: rgba(0, 123, 255, 0.2);
-    box-sizing: border-box;
-}
 
 /* 2. TEXT BOX */
 .text-box {
@@ -288,21 +269,6 @@ body {
     position: sticky;
     top: 60px; /* Matches the height of the main toolbar */
     z-index: 90;
-}
-
-/* Hide it by default in CSS, JS will show it when needed */
-/* Note: If JS sets display:flex, it overrides this. */
-
-.tool-option {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: #ccc;
-}
-
-.tool-option i {
-    font-size: 14px;
-    color: #fff;
 }
 
 /* Style the inputs inside the sub-toolbar */
@@ -402,4 +368,12 @@ body {
 .signature-box:hover {
     border-color: #e0a800; /* Darker Yellow */
     z-index: 50;
+}
+
+.selection-marquee {
+    position: absolute;
+    border: 1px dashed #007bff;
+    background-color: rgba(0, 123, 255, 0.2); /* Semi-transparent blue */
+    z-index: 1000;
+    pointer-events: none; /* Ignore mouse clicks so it doesn't interfere */
 }

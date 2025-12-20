@@ -115,13 +115,69 @@ function setupInteractionLayer(w, h) {
   overlay.addEventListener("mousedown", (e) => {
     // 1. Only trigger if clicking blank space (not an existing box)
     if (e.target !== overlay) return;
+
+    if (currentTool === "select") {
+      // 1. Clear previous selection unless Shift is held
+      if (!e.shiftKey) deselectAll();
+
+      // 2. Create the visual marquee box
+      const marquee = document.createElement("div");
+      marquee.className = "selection-marquee";
+      overlay.appendChild(marquee);
+
+      const startX = e.offsetX;
+      const startY = e.offsetY;
+
+      // 3. Define Mouse Move (Resize Marquee)
+      const onMarqueeMove = (ev) => {
+        // Robust coordinate calculation relative to the overlay
+        const rect = overlay.getBoundingClientRect();
+        const currentX = ev.clientX - rect.left;
+        const currentY = ev.clientY - rect.top;
+
+        // Calculate Width/Height/Top/Left (Handling negative drag directions)
+        const width = Math.abs(currentX - startX);
+        const height = Math.abs(currentY - startY);
+        const left = Math.min(currentX, startX);
+        const top = Math.min(currentY, startY);
+
+        marquee.style.width = width + "px";
+        marquee.style.height = height + "px";
+        marquee.style.left = left + "px";
+        marquee.style.top = top + "px";
+      };
+
+      // 4. Define Mouse Up (Finalize Selection)
+      const onMarqueeUp = () => {
+        // Find all potential items
+        const allItems = document.querySelectorAll(
+          ".field-box, .text-box, .signature-box"
+        );
+
+        allItems.forEach((item) => {
+          if (elementsOverlap(marquee, item)) {
+            item.classList.add("selected");
+          }
+        });
+
+        // Cleanup
+        marquee.remove();
+        overlay.removeEventListener("mousemove", onMarqueeMove);
+        window.removeEventListener("mouseup", onMarqueeUp);
+      };
+
+      // Attach temporary listeners
+      overlay.addEventListener("mousemove", onMarqueeMove);
+      window.addEventListener("mouseup", onMarqueeUp); // Window ensures we catch release outside canvas
+
+      return; // Stop here, don't create a box
+    }
     const selected = document.querySelector(".selected");
     const editing = document.querySelector(".editing");
-    if (selected || editing || currentTool === "select") {
+    if (selected || editing) {
       deselectAll();
       return;
     }
-
     // 2. Get the default size for the current tool
     const size = defaultSizes[currentTool];
 
@@ -400,13 +456,6 @@ function initResize(handle, box) {
   });
 }
 
-// Update the overlay click listener to call deselectAll
-// document.getElementById("drawing-layer").addEventListener("mousedown", (e) => {
-//   if (e.target.id === "drawing-layer") {
-//     deselectAll();
-//   }
-// });
-
 // --- SAVE LOGIC (The Heavy Lifter) ---
 document.getElementById("save-btn").addEventListener("click", async () => {
   if (!currentPdfBytes) return;
@@ -621,3 +670,15 @@ document.addEventListener("keydown", (e) => {
       selected.style.left = currentLeft + shift + "px";
   }
 });
+
+function elementsOverlap(el1, el2) {
+  const r1 = el1.getBoundingClientRect();
+  const r2 = el2.getBoundingClientRect();
+
+  return !(
+    r1.right < r2.left ||
+    r1.left > r2.right ||
+    r1.bottom < r2.top ||
+    r1.top > r2.bottom
+  );
+}
