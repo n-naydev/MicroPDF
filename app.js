@@ -201,8 +201,10 @@ function finalizeWidget(element, type) {
     setupSignatureDrawing(canvas, sigSettings.width, sigSettings.color);
   }
 
-  element.classList.add("selected");
-  element.classList.add("editing");
+  if (type !== "field") {
+    element.classList.add("selected");
+    element.classList.add("editing");
+  }
 
   // 4. Initialize Interaction
   makeBoxInteractive(element);
@@ -242,7 +244,9 @@ function makeBoxInteractive(box) {
     box.classList.remove("selected");
 
     // 2. Add 'editing' style (green border, pointer-events: auto)
-    box.classList.add("editing");
+    if (!box.classList.contains("field-box")) {
+      box.classList.add("editing");
+    }
 
     // 3. Focus if it's text
     const input = box.querySelector("textarea");
