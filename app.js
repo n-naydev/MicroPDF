@@ -96,7 +96,6 @@ function setupInteractionLayer(w, h) {
   let tempBox = null;
 
   overlay.addEventListener("mousedown", (e) => {
-    console.log("222");
     if (e.target !== overlay) return;
 
     isDrawingBox = true;
@@ -148,7 +147,6 @@ function setupInteractionLayer(w, h) {
 // --- UPDATED WIDGET LOGIC ---
 
 function finalizeWidget(element, type) {
-  console.log("333");
   // 1. Delete Button
   const delBtn = document.createElement("div");
   delBtn.className = "delete-btn";
@@ -314,7 +312,6 @@ function initDrag(e, box) {
 }
 
 function initResize(handle, box) {
-  console.log("000", handle, box);
   handle.addEventListener("mousedown", (e) => {
     e.stopPropagation();
     e.preventDefault();
@@ -366,7 +363,6 @@ function initResize(handle, box) {
 
 // Update the overlay click listener to call deselectAll
 document.getElementById("drawing-layer").addEventListener("mousedown", (e) => {
-  console.log(111);
   if (e.target.id === "drawing-layer") {
     deselectAll();
   }
