@@ -11,7 +11,7 @@ let currentPdfBytes = null;
 let scale = 1.5;
 let activePageViewport = null;
 // Defaults
-let textSettings = { size: 14, color: "#000000" };
+let textSettings = { size: 14, color: "#000000", font: "Helvetica" };
 let sigSettings = { width: 2, color: "#000000" };
 
 // --- TOOLBAR LOGIC ---
@@ -37,16 +37,38 @@ function setTool(tool) {
   } else if (tool === "text") {
     sub.style.display = "flex";
     sub.innerHTML = `
+        <div class="tool-option" title="Font Family">
+            <i class="fa-solid fa-font"></i>
+            <select id="opt-font-family">
+                <option value="Helvetica" ${
+                  textSettings.font === "Helvetica" ? "selected" : ""
+                }>Helvetica</option>
+                <option value="Times New Roman" ${
+                  textSettings.font === "Times New Roman" ? "selected" : ""
+                }>Times Roman</option>
+                <option value="Courier New" ${
+                  textSettings.font === "Courier New" ? "selected" : ""
+                }>Courier</option>
+            </select>
+        </div>
+
         <div class="tool-option" title="Font Size">
             <i class="fa-solid fa-text-height"></i>
-            <input type="number" id="opt-font-size" value="${textSettings.size}" min="8" max="72">
+            <input type="number" id="opt-font-size" value="${
+              textSettings.size
+            }" min="8" max="72">
         </div>
         <div class="tool-option" title="Text Color">
             <i class="fa-solid fa-palette"></i>
-            <input type="color" id="opt-text-color" value="${textSettings.color}">
+            <input type="color" id="opt-text-color" value="${
+              textSettings.color
+            }">
         </div>
     `;
+
     // Listeners
+    document.getElementById("opt-font-family").onchange = (e) =>
+      (textSettings.font = e.target.value);
     document.getElementById("opt-font-size").onchange = (e) =>
       (textSettings.size = parseInt(e.target.value));
     document.getElementById("opt-text-color").oninput = (e) =>
@@ -284,8 +306,12 @@ function finalizeWidget(element, type) {
     // Apply Settings
     input.style.fontSize = textSettings.size + "px";
     input.style.color = textSettings.color;
+    input.style.fontFamily = textSettings.font; // <--- NEW: VISUAL FONT
+
+    // Store Settings for Saving
     element.dataset.fontSize = textSettings.size;
     element.dataset.fontColor = textSettings.color;
+    element.dataset.fontFamily = textSettings.font; // <--- NEW: STORE FONT NAME
 
     element.appendChild(input);
   } else if (type === "signature") {
@@ -602,17 +628,38 @@ document.getElementById("save-btn").addEventListener("click", async () => {
     };
   };
 
-  // 1. PROCESS TEXT
+  // --- PRE-LOAD FONTS ---
+  // We need to embed the fonts before we can use them.
+  const embeddedFonts = {
+    Helvetica: await doc.embedFont(StandardFonts.Helvetica),
+    "Times New Roman": await doc.embedFont(StandardFonts.TimesRoman),
+    "Courier New": await doc.embedFont(StandardFonts.Courier),
+  };
+
+  // --- PROCESS TEXT ---
   document.querySelectorAll(".text-box").forEach((box) => {
+    const textVal = box.querySelector("textarea").value;
+    if (!textVal) return;
+
+    // Retrieve correct page
     const { page, height } = getPageForBox(box);
-    const rect = getPdfRect(box, height); // Pass page height to helper
-    // ... drawText logic ...
-    page.drawText(box.querySelector("textarea").value, {
+    const rect = getPdfRect(box, height);
+
+    // Retrieve settings
+    const size = parseInt(box.dataset.fontSize) || 14;
+    const hexColor = box.dataset.fontColor || "#000000";
+    const { r, g, b } = hexToRgb(hexColor);
+
+    // Retrieve Font (Default to Helvetica if missing)
+    const fontName = box.dataset.fontFamily || "Helvetica";
+    const selectedFont = embeddedFonts[fontName];
+
+    page.drawText(textVal, {
       x: rect.x + 2,
-      y: rect.y + rect.h - 14, // Simple adjustment
-      size: parseInt(box.dataset.fontSize),
-      font: helveticaFont,
-      color: rgb(0, 0, 0), // (Simplified for brevity)
+      y: rect.y + rect.h - size, // Adjust Y based on font size
+      size: size,
+      font: selectedFont, // <--- USE THE CORRECT FONT OBJECT
+      color: rgb(r, g, b),
     });
   });
 
@@ -693,7 +740,11 @@ document.addEventListener("keydown", (e) => {
   // 1. DELETE
   if (e.key === "Delete" || e.key === "Backspace") {
     const selected = document.querySelectorAll(".selected");
-    selected.forEach((el) => el.remove());
+    selected.forEach((el) => {
+      if (!el.classList.contains("editing")) {
+        el.remove();
+      }
+    });
   }
 
   // 2. COPY (Ctrl+C)
@@ -717,6 +768,7 @@ document.addEventListener("keydown", (e) => {
         // Capture Settings (Color/Size)
         fontSize: selected.dataset.fontSize,
         fontColor: selected.dataset.fontColor,
+        fontFamily: selected.dataset.fontFamily, // Capture font
       };
 
       // C. Capture Content
@@ -735,7 +787,7 @@ document.addEventListener("keydown", (e) => {
   // 3. PASTE (Ctrl+V)
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") {
     if (clipboard) {
-      const overlay = document.getElementById("drawing-layer");
+      const overlay = document.querySelector(".drawing-layer");
 
       // A. Create Wrapper
       const newBox = document.createElement("div");
@@ -758,7 +810,6 @@ document.addEventListener("keydown", (e) => {
       // B. Re-apply Settings BEFORE finalizing (so inputs get correct styles)
       // We temporarily override the global settings to match the copied box
       const originalTextSettings = { ...textSettings };
-      const originalSigSettings = { ...sigSettings };
 
       if (clipboard.fontSize) textSettings.size = clipboard.fontSize;
       if (clipboard.fontColor) textSettings.color = clipboard.fontColor;
@@ -773,6 +824,7 @@ document.addEventListener("keydown", (e) => {
       // D. Restore Content
       if (clipboard.type === "text") {
         newBox.querySelector("textarea").value = clipboard.textContent;
+        if (clipboard.fontFamily) textSettings.font = clipboard.fontFamily;
       } else if (clipboard.type === "signature") {
         // We need to draw the saved image back onto the new canvas
         const canvas = newBox.querySelector("canvas");

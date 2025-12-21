@@ -397,3 +397,20 @@ body {
     left: 0;
     /* width/height will be set by JS */
 }
+
+/* Style for the dropdown in the dark toolbar */
+#opt-font-family {
+    background: #555;
+    color: white;
+    border: 1px solid #777;
+    border-radius: 4px;
+    padding: 2px 5px;
+    height: 24px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+#opt-font-family:focus {
+    outline: none;
+    border-color: #007bff;
+}
