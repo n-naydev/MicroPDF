@@ -805,18 +805,18 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "ArrowRight")
       selected.style.left = currentLeft + shift + "px";
   }
-}),
-  function elementsOverlap(el1, el2) {
-    const r1 = el1.getBoundingClientRect();
-    const r2 = el2.getBoundingClientRect();
+});
+function elementsOverlap(el1, el2) {
+  const r1 = el1.getBoundingClientRect();
+  const r2 = el2.getBoundingClientRect();
 
-    return !(
-      r1.right < r2.left ||
-      r1.left > r2.right ||
-      r1.bottom < r2.top ||
-      r1.top > r2.bottom
-    );
-  };
+  return !(
+    r1.right < r2.left ||
+    r1.left > r2.right ||
+    r1.bottom < r2.top ||
+    r1.top > r2.bottom
+  );
+}
 
 async function loadExistingFields() {
   if (!currentPdfBytes) return;
