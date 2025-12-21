@@ -791,23 +791,25 @@ document.addEventListener("keydown", (e) => {
   }
 
   // 4. NUDGE (Arrow Keys)
-  const selected = document.querySelector(".selected");
-  if (
-    selected &&
-    !selected.classList.contains("editing") &&
-    ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)
-  ) {
-    e.preventDefault();
-    const currentLeft = parseInt(selected.style.left || 0);
-    const currentTop = parseInt(selected.style.top || 0);
-    const shift = e.shiftKey ? 10 : 1;
+  document.querySelectorAll(".selected").forEach((selected) => {
+    if (
+      selected &&
+      !selected.classList.contains("editing") &&
+      ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)
+    ) {
+      e.preventDefault();
+      const currentLeft = parseInt(selected.style.left || 0);
+      const currentTop = parseInt(selected.style.top || 0);
+      const shift = e.shiftKey ? 10 : 1;
 
-    if (e.key === "ArrowUp") selected.style.top = currentTop - shift + "px";
-    if (e.key === "ArrowDown") selected.style.top = currentTop + shift + "px";
-    if (e.key === "ArrowLeft") selected.style.left = currentLeft - shift + "px";
-    if (e.key === "ArrowRight")
-      selected.style.left = currentLeft + shift + "px";
-  }
+      if (e.key === "ArrowUp") selected.style.top = currentTop - shift + "px";
+      if (e.key === "ArrowDown") selected.style.top = currentTop + shift + "px";
+      if (e.key === "ArrowLeft")
+        selected.style.left = currentLeft - shift + "px";
+      if (e.key === "ArrowRight")
+        selected.style.left = currentLeft + shift + "px";
+    }
+  });
 });
 function elementsOverlap(el1, el2) {
   const r1 = el1.getBoundingClientRect();
