@@ -2,7 +2,7 @@
 import * as pdfjsLib from "./libs/pdf.mjs";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "./libs/pdf.worker.mjs";
-const { PDFDocument, rgb, StandardFonts } = window.PDFLib;
+const { PDFDocument, rgb, StandardFonts, PDFTextField } = window.PDFLib;
 
 // --- STATE ---
 let currentTool = "select"; // 'select', 'field', 'text', 'signature'
@@ -882,7 +882,7 @@ async function loadExistingFields() {
   const fields = form.getFields();
 
   fields.forEach((field) => {
-    if (field.constructor.name === "PDFTextField") {
+    if (field instanceof PDFTextField) {
       const widgets = field.acroField.getWidgets();
       widgets.forEach((widget) => {
         const rect = widget.getRectangle();
