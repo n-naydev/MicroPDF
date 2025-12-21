@@ -72,7 +72,7 @@ function setTool(tool) {
 }
 
 // Initialize default view
-setTool("field");
+setTool("select");
 
 // --- INITIALIZATION (Standard) ---
 const urlParams = new URLSearchParams(window.location.search);
