@@ -349,15 +349,12 @@ function makeBoxInteractive(box) {
   box.addEventListener("dblclick", (e) => {
     e.stopPropagation();
 
-    // 1. Remove 'selected' style (dashed blue)
     box.classList.remove("selected");
 
-    // 2. Add 'editing' style (green border, pointer-events: auto)
     if (!box.classList.contains("field-box")) {
       box.classList.add("editing");
     }
 
-    // 3. Focus if it's text
     const input = box.querySelector("textarea");
     if (input) {
       input.focus();
@@ -394,6 +391,8 @@ function setupSignatureDrawing(canvas, width, color) {
   }
 
   canvas.addEventListener("mousedown", (e) => {
+    e.stopPropagation(); // 1. Don't tell the container we clicked (Stops Dragging)
+    e.preventDefault(); // 2. Don't let browser select the canvas as an image
     painting = true;
     const pos = getPos(e);
     ctx.beginPath();
@@ -407,6 +406,8 @@ function setupSignatureDrawing(canvas, width, color) {
 
   canvas.addEventListener("mousemove", (e) => {
     if (!painting) return;
+    e.preventDefault();
+    e.stopPropagation();
     const pos = getPos(e);
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
@@ -418,40 +419,42 @@ function setupSignatureDrawing(canvas, width, color) {
 function initDrag(e) {
   const startX = e.clientX;
   const startY = e.clientY;
-
-  // 1. Find all selected items
-  const selectedItems = document.querySelectorAll(".selected");
+  let isDragging = false;
 
   // 2. Prepare items for global dragging
   const dragData = [];
 
-  selectedItems.forEach((item) => {
-    // A. Get current absolute position on screen
-    const rect = item.getBoundingClientRect();
-
-    // B. Save reference to its current parent (in case we cancel)
-    const oldParent = item.parentElement;
-
-    // C. Move item to BODY so it can float over everything
-    document.body.appendChild(item);
-
-    // D. Position it absolutely on the body to match where it was visually
-    item.style.position = "fixed"; // 'fixed' is easier for screen-relative drag
-    item.style.left = rect.left + "px";
-    item.style.top = rect.top + "px";
-    item.style.zIndex = 9999; // Float above everything
-
-    dragData.push({
-      el: item,
-      startX: rect.left,
-      startY: rect.top,
-      oldParent: oldParent,
-    });
-  });
-
   const onMouseMove = (ev) => {
     const dx = ev.clientX - startX;
     const dy = ev.clientY - startY;
+    if (!isDragging && Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+    if (!isDragging) {
+      isDragging = true;
+      const selectedItems = document.querySelectorAll(".selected");
+      selectedItems.forEach((item) => {
+        // A. Get current absolute position on screen
+        const rect = item.getBoundingClientRect();
+
+        // B. Save reference to its current parent (in case we cancel)
+        const oldParent = item.parentElement;
+
+        // C. Move item to BODY so it can float over everything
+        document.body.appendChild(item);
+
+        // D. Position it absolutely on the body to match where it was visually
+        item.style.position = "fixed"; // 'fixed' is easier for screen-relative drag
+        item.style.left = rect.left + "px";
+        item.style.top = rect.top + "px";
+        item.style.zIndex = 9999; // Float above everything
+
+        dragData.push({
+          el: item,
+          startX: rect.left,
+          startY: rect.top,
+          oldParent: oldParent,
+        });
+      });
+    }
 
     dragData.forEach((data) => {
       data.el.style.left = data.startX + dx + "px";
