@@ -580,15 +580,12 @@ function initResize(handle, box) {
 
 // --- SAVE LOGIC (The Heavy Lifter) ---
 document.getElementById("save-btn").addEventListener("click", async () => {
-  console.log("000");
   if (!currentPdfBytes) return;
-  console.log("000.111");
 
   const doc = await PDFDocument.load(currentPdfBytes);
   const form = doc.getForm();
   const helveticaFont = await doc.embedFont(StandardFonts.Helvetica);
 
-  console.log("000.222");
   // Helper to get the correct PDF page object for a specific DOM element
   const getPageForBox = (box) => {
     // 1. Go up to the .page-container
@@ -809,19 +806,17 @@ document.addEventListener("keydown", (e) => {
       selected.style.left = currentLeft + shift + "px";
   }
 }),
-  height;
+  function elementsOverlap(el1, el2) {
+    const r1 = el1.getBoundingClientRect();
+    const r2 = el2.getBoundingClientRect();
 
-function elementsOverlap(el1, el2) {
-  const r1 = el1.getBoundingClientRect();
-  const r2 = el2.getBoundingClientRect();
-
-  return !(
-    r1.right < r2.left ||
-    r1.left > r2.right ||
-    r1.bottom < r2.top ||
-    r1.top > r2.bottom
-  );
-}
+    return !(
+      r1.right < r2.left ||
+      r1.left > r2.right ||
+      r1.bottom < r2.top ||
+      r1.top > r2.bottom
+    );
+  };
 
 async function loadExistingFields() {
   if (!currentPdfBytes) return;
