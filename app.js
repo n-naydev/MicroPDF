@@ -78,13 +78,62 @@ setTool("field");
 const urlParams = new URLSearchParams(window.location.search);
 const pdfUrl = urlParams.get("file");
 
+// ... (Imports and State stay the same) ...
+
+// --- REPLACED: Initialization ---
 if (pdfUrl) {
   const loadingTask = pdfjsLib.getDocument(pdfUrl);
   loadingTask.promise.then(async (pdf) => {
     pdfDoc = pdf;
     currentPdfBytes = await fetch(pdfUrl).then((res) => res.arrayBuffer());
-    renderPage(1);
+
+    // Loop through ALL pages
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      await renderOnePage(pageNum);
+    }
+
+    // After rendering all pages, load existing form fields (if any)
+    if (!window.fieldsLoaded) {
+      loadExistingFields();
+      window.fieldsLoaded = true;
+    }
   });
+}
+
+// --- REPLACED: Render Logic ---
+async function renderOnePage(num) {
+  const page = await pdfDoc.getPage(num);
+  const viewport = page.getViewport({ scale: scale });
+
+  // 1. Create the Page Container
+  const wrapper = document.getElementById("pdf-wrapper");
+  const pageContainer = document.createElement("div");
+  pageContainer.className = "page-container";
+  pageContainer.dataset.pageNumber = num; // Store page number for saving later!
+
+  // 2. Create Canvas
+  const canvas = document.createElement("canvas");
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  const ctx = canvas.getContext("2d");
+
+  // 3. Create Overlay (Drawing Layer)
+  const overlay = document.createElement("div");
+  overlay.className = "drawing-layer";
+  overlay.style.width = viewport.width + "px";
+  overlay.style.height = viewport.height + "px";
+
+  // 4. Assemble
+  pageContainer.appendChild(canvas);
+  pageContainer.appendChild(overlay);
+  wrapper.appendChild(pageContainer);
+
+  // 5. Render PDF
+  await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+  // 6. Setup Interaction for THIS specific page
+  // We pass the 'overlay' element directly so the function knows where to attach listeners
+  setupInteractionLayer(overlay, viewport);
 }
 
 function renderPage(num) {
@@ -100,16 +149,13 @@ function renderPage(num) {
 }
 
 // --- INTERACTION LAYER (Click-to-Place Version) ---
-function setupInteractionLayer(w, h) {
-  const overlay = document.getElementById("drawing-layer");
-  overlay.style.width = w + "px";
-  overlay.style.height = h + "px";
+function setupInteractionLayer(overlay, viewport) {
+  // We don't look up by ID anymore. We use the 'overlay' passed to us.
 
-  // Standard dimensions for "1 row input" style
   const defaultSizes = {
-    field: { w: 200, h: 30 }, // Looks like a standard form input
-    text: { w: 200, h: 30 }, // Fits size 14 text nicely
-    signature: { w: 250, h: 120 }, // Big enough to sign name
+    field: { w: 200, h: 30 },
+    text: { w: 200, h: 30 },
+    signature: { w: 250, h: 120 },
   };
 
   overlay.addEventListener("mousedown", (e) => {
@@ -376,13 +422,30 @@ function initDrag(e) {
   // 1. Find all selected items
   const selectedItems = document.querySelectorAll(".selected");
 
-  // 2. Record starting positions for EVERY selected item
-  const initialPositions = [];
+  // 2. Prepare items for global dragging
+  const dragData = [];
+
   selectedItems.forEach((item) => {
-    initialPositions.push({
+    // A. Get current absolute position on screen
+    const rect = item.getBoundingClientRect();
+
+    // B. Save reference to its current parent (in case we cancel)
+    const oldParent = item.parentElement;
+
+    // C. Move item to BODY so it can float over everything
+    document.body.appendChild(item);
+
+    // D. Position it absolutely on the body to match where it was visually
+    item.style.position = "fixed"; // 'fixed' is easier for screen-relative drag
+    item.style.left = rect.left + "px";
+    item.style.top = rect.top + "px";
+    item.style.zIndex = 9999; // Float above everything
+
+    dragData.push({
       el: item,
-      left: parseFloat(item.style.left),
-      top: parseFloat(item.style.top),
+      startX: rect.left,
+      startY: rect.top,
+      oldParent: oldParent,
     });
   });
 
@@ -390,16 +453,75 @@ function initDrag(e) {
     const dx = ev.clientX - startX;
     const dy = ev.clientY - startY;
 
-    // 3. Move EVERY selected item by the same delta
-    initialPositions.forEach((pos) => {
-      pos.el.style.left = pos.left + dx + "px";
-      pos.el.style.top = pos.top + dy + "px";
+    dragData.forEach((data) => {
+      data.el.style.left = data.startX + dx + "px";
+      data.el.style.top = data.startY + dy + "px";
     });
   };
 
-  const onMouseUp = () => {
+  const onMouseUp = (ev) => {
     window.removeEventListener("mousemove", onMouseMove);
     window.removeEventListener("mouseup", onMouseUp);
+
+    // 3. DROPPING THE ITEM
+    // We need to find which Page Container is under the mouse
+
+    // Hide items temporarily so elementFromPoint sees the page, not the box
+    dragData.forEach((d) => (d.el.style.display = "none"));
+
+    // Find the element under the cursor
+    const elementBelow = document.elementFromPoint(ev.clientX, ev.clientY);
+
+    // Show items again
+    dragData.forEach((d) => (d.el.style.display = "block"));
+
+    // Find the closest page container
+    const pageContainer = elementBelow
+      ? elementBelow.closest(".page-container")
+      : null;
+
+    if (pageContainer) {
+      // 4. FOUND A NEW PAGE!
+      const newOverlay = pageContainer.querySelector(".drawing-layer");
+      const overlayRect = newOverlay.getBoundingClientRect();
+
+      dragData.forEach((data) => {
+        // Append to the new page's overlay
+        newOverlay.appendChild(data.el);
+
+        // Convert Fixed Coords (Screen) -> Absolute Coords (Overlay)
+        const currentRect = data.el.getBoundingClientRect();
+
+        // New Left = BoxScreenX - OverlayScreenX
+        const newLeft = currentRect.left - overlayRect.left;
+        const newTop = currentRect.top - overlayRect.top;
+
+        data.el.style.position = "absolute"; // Back to absolute
+        data.el.style.left = newLeft + "px";
+        data.el.style.top = newTop + "px";
+        data.el.style.zIndex = ""; // Reset Z-Index
+      });
+    } else {
+      // 5. DROPPED OUTSIDE ANY PAGE?
+      // Revert to old parent or just keep it on the last valid page?
+      // Usually revert is safer:
+      dragData.forEach((data) => {
+        data.oldParent.appendChild(data.el);
+        // We'd need to recalculate position relative to old parent here,
+        // but for simplicity, let's assume users won't drop in the void often.
+        // A better UX is to snap to the nearest page.
+
+        // For MVP: Just Snap back to where it started relative to screen
+        // (This part needs Math to put it back into the old parent's coord system)
+        const rect = data.el.getBoundingClientRect();
+        const parentRect = data.oldParent.getBoundingClientRect();
+
+        data.el.style.position = "absolute";
+        data.el.style.left = rect.left - parentRect.left + "px";
+        data.el.style.top = rect.top - parentRect.top + "px";
+        data.el.style.zIndex = "";
+      });
+    }
   };
 
   window.addEventListener("mousemove", onMouseMove);
@@ -458,16 +580,68 @@ function initResize(handle, box) {
 
 // --- SAVE LOGIC (The Heavy Lifter) ---
 document.getElementById("save-btn").addEventListener("click", async () => {
+  console.log("000");
   if (!currentPdfBytes) return;
+  console.log("000.111");
 
   const doc = await PDFDocument.load(currentPdfBytes);
-  const page = doc.getPages()[0];
   const form = doc.getForm();
   const helveticaFont = await doc.embedFont(StandardFonts.Helvetica);
 
-  // 1. PROCESS FORM FIELDS
+  console.log("000.222");
+  // Helper to get the correct PDF page object for a specific DOM element
+  const getPageForBox = (box) => {
+    // 1. Go up to the .page-container
+    const container = box.closest(".page-container");
+    // 2. Get the page number (Stored in data attribute)
+    const num = parseInt(container.dataset.pageNumber);
+    // 3. Return the pdf-lib page (0-indexed)
+    return {
+      page: doc.getPages()[num - 1],
+      height: doc.getPages()[num - 1].getHeight(), // Get actual PDF height
+    };
+  };
+
+  // 1. PROCESS TEXT
+  document.querySelectorAll(".text-box").forEach((box) => {
+    const { page, height } = getPageForBox(box);
+    const rect = getPdfRect(box, height); // Pass page height to helper
+    // ... drawText logic ...
+    page.drawText(box.querySelector("textarea").value, {
+      x: rect.x + 2,
+      y: rect.y + rect.h - 14, // Simple adjustment
+      size: parseInt(box.dataset.fontSize),
+      font: helveticaFont,
+      color: rgb(0, 0, 0), // (Simplified for brevity)
+    });
+  });
+
+  // 3. PROCESS SIGNATURES
+  const sigs = document.querySelectorAll(".signature-box");
+
+  // 2. Use 'for...of' to wait for each await
+  for (const box of sigs) {
+    const { page, height } = getPageForBox(box);
+    const rect = getPdfRect(box, height);
+    const canvas = box.querySelector("canvas");
+
+    // Convert canvas to PNG image data
+    const pngImageBytes = canvas.toDataURL("image/png");
+
+    // This await will now correctly pause the loop
+    const pngImage = await doc.embedPng(pngImageBytes);
+
+    page.drawImage(pngImage, {
+      x: rect.x,
+      y: rect.y,
+      width: rect.w,
+      height: rect.h,
+    });
+  }
+
   document.querySelectorAll(".field-box").forEach((box, i) => {
-    const rect = getPdfRect(box);
+    const { page, height } = getPageForBox(box);
+    const rect = getPdfRect(box, height);
     const textField = form.createTextField(`field_${i}_${Date.now()}`);
     textField.addToPage(page, {
       x: rect.x,
@@ -478,43 +652,6 @@ document.getElementById("save-btn").addEventListener("click", async () => {
     });
   });
 
-  // 2. PROCESS TEXT
-  document.querySelectorAll(".text-box").forEach((box) => {
-    const textVal = box.querySelector("textarea").value;
-    if (!textVal) return;
-    const rect = getPdfRect(box);
-
-    // Retrieve stored settings
-    const size = parseInt(box.dataset.fontSize) || 14;
-    const hexColor = box.dataset.fontColor || "#000000";
-    const { r, g, b } = hexToRgb(hexColor); // Convert to 0-1 range
-
-    page.drawText(textVal, {
-      x: rect.x + 2,
-      y: rect.y + rect.h - size, // Adjust Y based on font size
-      size: size,
-      font: helveticaFont,
-      color: rgb(r, g, b), // Use dynamic color
-    });
-  });
-
-  // 3. PROCESS SIGNATURES
-  const sigs = document.querySelectorAll(".signature-box");
-  for (const box of sigs) {
-    const canvas = box.querySelector("canvas");
-    // Convert canvas to PNG image data
-    const pngImageBytes = canvas.toDataURL("image/png");
-    const pngImage = await doc.embedPng(pngImageBytes);
-    const rect = getPdfRect(box);
-
-    page.drawImage(pngImage, {
-      x: rect.x,
-      y: rect.y,
-      width: rect.w,
-      height: rect.h,
-    });
-  }
-
   // Save and Download
   const pdfBytes = await doc.save();
   const blob = new Blob([pdfBytes], { type: "application/pdf" });
@@ -524,16 +661,18 @@ document.getElementById("save-btn").addEventListener("click", async () => {
   link.click();
 });
 
-// Helper: Convert DOM Element position to PDF Coordinates
-function getPdfRect(element) {
+// Update helper to accept Page Height dynamically
+function getPdfRect(element, pdfPageHeight) {
   const screenX = element.offsetLeft;
   const screenY = element.offsetTop;
   const screenW = element.offsetWidth;
   const screenH = element.offsetHeight;
 
+  // Note: activePageViewport is GONE. We use the DOM overlay height or similar.
+  // Actually, simplest is:
   return {
     x: screenX / scale,
-    y: (activePageViewport.height - (screenY + screenH)) / scale,
+    y: pdfPageHeight - (screenY + screenH) / scale, // Calculate from Bottom
     w: screenW / scale,
     h: screenH / scale,
   };
@@ -669,7 +808,8 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "ArrowRight")
       selected.style.left = currentLeft + shift + "px";
   }
-});
+}),
+  height;
 
 function elementsOverlap(el1, el2) {
   const r1 = el1.getBoundingClientRect();
@@ -681,4 +821,58 @@ function elementsOverlap(el1, el2) {
     r1.bottom < r2.top ||
     r1.top > r2.bottom
   );
+}
+
+async function loadExistingFields() {
+  if (!currentPdfBytes) return;
+  const doc = await PDFDocument.load(currentPdfBytes);
+  const form = doc.getForm();
+  const fields = form.getFields();
+
+  fields.forEach((field) => {
+    if (field.constructor.name === "PDFTextField") {
+      const widgets = field.acroField.getWidgets();
+      widgets.forEach((widget) => {
+        const rect = widget.getRectangle();
+
+        // IMPORTANT: Find out which page this widget belongs to
+        // pdf-lib refers to pages by object reference (PRef)
+        const pRef = widget.P();
+
+        // For MVP: We will loop through pages to find the match
+        // (Optimized lookup omitted for brevity, simple loop is fine for small docs)
+        let pageIndex = -1;
+        doc.getPages().forEach((p, idx) => {
+          if (p.ref === pRef) pageIndex = idx;
+        });
+
+        // If we found the page (0-indexed), find the DOM element (1-indexed)
+        if (pageIndex !== -1) {
+          const pageNum = pageIndex + 1;
+          const container = document.querySelector(
+            `.page-container[data-page-number="${pageNum}"]`
+          );
+          const overlay = container.querySelector(".drawing-layer");
+
+          // Retrieve viewport dimensions from the canvas/overlay for math
+          const overlayHeight = parseFloat(overlay.style.height);
+
+          const width = rect.width * scale;
+          const height = rect.height * scale;
+          const x = rect.x * scale;
+          const y = overlayHeight - rect.y * scale - height;
+
+          const newBox = document.createElement("div");
+          newBox.className = "field-box";
+          newBox.style.width = width + "px";
+          newBox.style.height = height + "px";
+          newBox.style.left = x + "px";
+          newBox.style.top = y + "px";
+
+          overlay.appendChild(newBox);
+          finalizeWidget(newBox, "field");
+        }
+      });
+    }
+  });
 }

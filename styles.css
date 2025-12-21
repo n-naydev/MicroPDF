@@ -377,3 +377,23 @@ body {
     z-index: 1000;
     pointer-events: none; /* Ignore mouse clicks so it doesn't interfere */
 }
+
+/* Each page is a relative container holding the Canvas + Overlay */
+.page-container {
+    position: relative;
+    margin: 20px auto;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+/* Ensure the canvas is block so it doesn't have weird spacing */
+.page-container canvas {
+    display: block;
+}
+
+/* The overlay sits on top of the canvas */
+.drawing-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    /* width/height will be set by JS */
+}
