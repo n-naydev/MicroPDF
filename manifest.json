@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Manual Form Builder",
+  "name": "MicroPDF",
   "version": "1.0",
   "permissions": ["activeTab", "downloads", "contextMenus"],
   "host_permissions": ["<all_urls>"],
