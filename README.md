@@ -4,7 +4,9 @@ A private, offline-first Chrome Extension for editing, signing, and filling PDF 
 
 **No servers. No uploads. 100% Privacy.**
 
-![App Screenshot](<img width="1149" height="762" alt="image" src="https://github.com/user-attachments/assets/313bce04-22f8-46cd-a08a-95f7aa57366a" />)
+**App Screenshot:**
+
+<img width="575" height="381" alt="image" src="https://github.com/user-attachments/assets/313bce04-22f8-46cd-a08a-95f7aa57366a" />
 
 ## 🚀 Features
 
