@@ -1,6 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MicroPDF",
+  "short_name": "MicroPDF",
+  "description": "The lightweight, 100% private PDF editor. Sign and edit offline.",
   "version": "1.0",
   "permissions": ["activeTab", "downloads", "contextMenus"],
   "host_permissions": ["<all_urls>"],
