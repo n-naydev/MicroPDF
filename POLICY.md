@@ -1,6 +1,6 @@
 # Privacy Policy for MicroPDF
 
-**Last Updated:** [Insert Today's Date]
+**Last Updated:** 27.12.2025
 
 MicroPDF ("we", "our", or "the extension") is committed to protecting your privacy. This Privacy Policy explains how our Chrome Extension handles your data.
 
