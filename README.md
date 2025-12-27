@@ -16,7 +16,7 @@ A private, offline-first Chrome Extension for editing, signing, and filling PDF 
 * **Rich Text Tools:** Choose font families (Helvetica, Times, Courier), colors, and sizes.
 * **Smart Selection:** Group select items using `Shift+Click` or drag a marquee box.
 * **Clipboard:** Copy and paste widgets (`Ctrl+C` / `Ctrl+V`) across the document.
-* **Privacy Focused:** All processing happens locally using WebAssembly. Your files never leave your computer.
+* **Privacy Focused:** All processing happens locally using secure client-side JavaScript. Your files never leave your computer.
 
 ## 🛠️ Installation (Developer Mode)
 
@@ -74,7 +74,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ## 🤖 Acknowledgments
 
 * **Vibe Coding:** Built with the assistance of LLMs (Gemini) to accelerate development.
-* **Libraries:** `pdf.js` and `pdf-lib` for the heavy liftin
+* **Libraries:** `pdf.js` and `pdf-lib` for the heavy lifting
 
 ---
 *Built with ❤️ for privacy.*
